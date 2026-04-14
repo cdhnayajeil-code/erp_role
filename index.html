@@ -796,15 +796,38 @@
             </button>
         </div>
 
-        <!-- Action Bar (search + export) -->
-        <div class="role-action-bar">
+        <!-- Action Bar: Matrix 검색 (기본 표시) -->
+        <div class="role-action-bar" id="matrixActionBar">
+            <div class="filter-group">
+                <input type="text" id="matrixRoleSearch" class="role-search-input" placeholder="Role명 필터..." style="width:200px;" oninput="debounceMatrix()">
+                <input type="text" id="matrixDeptSearch" class="role-search-input" placeholder="부서명 필터..." style="width:180px;" oninput="debounceMatrix()">
+                <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#64748b; cursor:pointer; white-space:nowrap;">
+                    <input type="checkbox" id="matrixHideEmpty" onchange="renderMatrix()" style="margin:0;">
+                    빈 행 숨기기
+                </label>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span class="matrix-info" id="matrixInfo" style="font-size:11px; color:var(--text-muted); white-space:nowrap;"></span>
+                <button class="btn btn-success" id="btnExport" title="엑셀 내보내기" disabled style="padding: var(--space-1) var(--space-3); font-size: var(--font-size-xs);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    엑셀
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Bar: 목록 검색 (기본 숨김) -->
+        <div class="role-action-bar" id="listActionBar" style="display:none;">
             <div class="filter-group">
                 <input type="text" id="searchInput" class="role-search-input" placeholder="Role ID / Role명 검색...">
                 <input type="text" id="menuSearchInput" class="role-search-input" placeholder="메뉴명 검색..." style="width:160px;">
                 <input type="text" id="userSearchInput" class="role-search-input" placeholder="사용자명 / ID 검색..." style="width:180px;">
             </div>
             <div style="display: flex; align-items: center; gap: var(--space-2);">
-                <button class="btn btn-success" id="btnExport" title="엑셀 내보내기" disabled style="padding: var(--space-1) var(--space-3); font-size: var(--font-size-xs);">
+                <button class="btn btn-success" id="btnExportList" title="엑셀 내보내기" disabled style="padding: var(--space-1) var(--space-3); font-size: var(--font-size-xs);">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>
@@ -902,15 +925,6 @@
 
         <!-- Matrix View (기본 표시) -->
         <div class="matrix-container visible" id="matrixContainer">
-            <div class="matrix-toolbar">
-                <input type="text" id="matrixRoleSearch" class="role-search-input" placeholder="Role명 필터..." style="width:180px;" oninput="debounceMatrix()">
-                <input type="text" id="matrixDeptSearch" class="role-search-input" placeholder="부서명 필터..." style="width:150px;" oninput="debounceMatrix()">
-                <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; cursor:pointer;">
-                    <input type="checkbox" id="matrixHideEmpty" onchange="renderMatrix()" style="margin:0;">
-                    빈 행 숨기기
-                </label>
-                <span class="matrix-info" id="matrixInfo"></span>
-            </div>
             <div class="matrix-scroll" id="matrixScroll">
                 <div style="padding:40px; text-align:center; color:var(--text-muted); font-size:13px;">
                     데이터 로딩 중...
@@ -1087,6 +1101,7 @@
                     buildGroups();
                     filterRoles();
                     document.getElementById('btnExport').disabled = false;
+                    document.getElementById('btnExportList').disabled = false;
                     if (document.getElementById('matrixContainer').classList.contains('visible')) {
                         renderMatrix();
                     }
@@ -1486,18 +1501,24 @@
             const matrixView = document.getElementById('matrixContainer');
             const btnList = document.getElementById('btnViewList');
             const btnMatrix = document.getElementById('btnViewMatrix');
+            const matrixActionBar = document.getElementById('matrixActionBar');
+            const listActionBar = document.getElementById('listActionBar');
 
             if (view === 'matrix') {
                 listView.style.display = 'none';
                 matrixView.classList.add('visible');
                 btnList.classList.remove('active');
                 btnMatrix.classList.add('active');
+                matrixActionBar.style.display = '';
+                listActionBar.style.display = 'none';
                 if (AppState.allDataLoaded) renderMatrix();
             } else {
                 listView.style.display = '';
                 matrixView.classList.remove('visible');
                 btnList.classList.add('active');
                 btnMatrix.classList.remove('active');
+                matrixActionBar.style.display = 'none';
+                listActionBar.style.display = '';
             }
         }
 
@@ -1795,14 +1816,10 @@
         // Event Listeners
         // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btnExport').addEventListener('click', () => {
-                const isMatrix = document.getElementById('matrixContainer').classList.contains('visible');
-                if (isMatrix) {
-                    exportMatrixExcel();
-                } else {
-                    exportExcel();
-                }
-            });
+            // 엑셀 버튼: Matrix용
+            document.getElementById('btnExport').addEventListener('click', exportMatrixExcel);
+            // 엑셀 버튼: 목록용
+            document.getElementById('btnExportList').addEventListener('click', exportExcel);
 
             // 기본 뷰: Matrix 활성화
             document.getElementById('btnViewMatrix').classList.add('active');
