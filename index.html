@@ -909,14 +909,6 @@
                     <input type="checkbox" id="matrixHideEmpty" onchange="renderMatrix()" style="margin:0;">
                     빈 행 숨기기
                 </label>
-                <button class="btn btn-success" onclick="exportMatrixExcel()" style="padding:3px 10px; font-size:11px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    엑셀
-                </button>
                 <span class="matrix-info" id="matrixInfo"></span>
             </div>
             <div class="matrix-scroll" id="matrixScroll">
@@ -1741,29 +1733,51 @@
                 return;
             }
 
-            const data = AppState.filteredRoles.map((r, idx) => ({
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Role 목록
+            const roleData = AppState.filteredRoles.map((r, idx) => ({
                 'NO': idx + 1,
                 'ROLE ID': r.roleId,
                 'ROLE명': r.roleName || '',
                 '사용자 수': r.userCount || 0,
                 '메뉴 수': r.menuCount || 0
             }));
+            const wsRoles = XLSX.utils.json_to_sheet(roleData);
+            wsRoles['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 30 }, { wch: 10 }, { wch: 10 }];
+            XLSX.utils.book_append_sheet(wb, wsRoles, 'Role 목록');
 
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Role 목록');
-
-            ws['!cols'] = [
-                { wch: 5 },
-                { wch: 30 },
-                { wch: 30 },
-                { wch: 10 },
-                { wch: 10 }
-            ];
+            // Sheet 2: Role별 메뉴 권한 상세
+            const menuRows = [];
+            AppState.filteredRoles.forEach(r => {
+                const menus = AppState.roleMenuCache[r.roleId] || [];
+                if (menus.length === 0) {
+                    menuRows.push({
+                        'ROLE ID': r.roleId,
+                        'ROLE명': r.roleName || '',
+                        '메뉴 경로': '',
+                        '메뉴명': '(메뉴 없음)',
+                        '권한': ''
+                    });
+                } else {
+                    menus.forEach(m => {
+                        menuRows.push({
+                            'ROLE ID': r.roleId,
+                            'ROLE명': r.roleName || '',
+                            '메뉴 경로': m.menuPath || '',
+                            '메뉴명': m.menuName || '',
+                            '권한': m.actionName || ''
+                        });
+                    });
+                }
+            });
+            const wsMenus = XLSX.utils.json_to_sheet(menuRows);
+            wsMenus['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 50 }, { wch: 25 }, { wch: 10 }];
+            XLSX.utils.book_append_sheet(wb, wsMenus, 'Role별 메뉴 권한');
 
             const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            XLSX.writeFile(wb, `Role_목록_${today}.xlsx`);
-            showToast('내보내기 완료', `${data.length}건 저장`, 'success');
+            XLSX.writeFile(wb, `Role_목록_메뉴_${today}.xlsx`);
+            showToast('내보내기 완료', `${roleData.length}개 Role, ${menuRows.length}건 메뉴 권한`, 'success');
         }
 
 
@@ -1781,7 +1795,14 @@
         // Event Listeners
         // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btnExport').addEventListener('click', exportExcel);
+            document.getElementById('btnExport').addEventListener('click', () => {
+                const isMatrix = document.getElementById('matrixContainer').classList.contains('visible');
+                if (isMatrix) {
+                    exportMatrixExcel();
+                } else {
+                    exportExcel();
+                }
+            });
 
             // 기본 뷰: Matrix 활성화
             document.getElementById('btnViewMatrix').classList.add('active');
