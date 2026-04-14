@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role 관리 - ERP role 변경내역 모니터링</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* === Role Management - Compact Dual Layout === */
+
+        /* Action bar */
+        .role-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-3);
+            gap: var(--space-3);
+        }
+
+        .role-action-bar .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .role-search-input {
+            padding: var(--space-1) var(--space-3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            width: 200px;
+            transition: all var(--transition-fast);
+        }
+
+        .role-search-input:focus {
+            outline: none;
+            border-color: var(--color-primary-light);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* === Main 2-column layout === */
+        .role-main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-4);
+            align-items: start;
+        }
+
+        /* Left: Role list */
+        .role-list-panel {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--bg-surface);
+        }
+
+        .role-list-panel .data-table-wrapper {
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .role-table {
+            font-size: 12px;
+        }
+
+        .role-table thead th {
+            padding: var(--space-2) var(--space-2);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .role-table tbody td {
+            padding: var(--space-1) var(--space-2);
+            line-height: 1.4;
+        }
+
+        .role-table col.col-no { width: 32px; }
+        .role-table col.col-role-id { width: 150px; }
+        .role-table col.col-role-name { width: auto; }
+        .role-table col.col-count { width: 50px; }
+
+        .role-table tbody tr {
+            cursor: pointer;
+        }
+
+        .role-table tbody tr.selected-role {
+            background-color: rgba(30, 64, 175, 0.1) !important;
+            border-left: 3px solid var(--color-primary);
+        }
+
+        .role-table tbody tr.selected-role:hover {
+            background-color: rgba(30, 64, 175, 0.14) !important;
+        }
+
+        .role-list-scroll {
+            max-height: calc(100vh - 240px);
+            overflow-y: auto;
+        }
+
+        /* Count badges - compact */
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            padding: 1px 5px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .count-badge-users {
+            background: var(--color-info-light);
+            color: var(--color-info);
+        }
+
+        .count-badge-menus {
+            background: var(--color-warning-light);
+            color: var(--color-warning);
+        }
+
+        /* Right: Detail panel */
+        .role-detail-side {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            background: var(--bg-surface);
+            overflow: hidden;
+            position: sticky;
+            top: var(--space-4);
+        }
+
+        .role-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-3) var(--space-4);
+            background: linear-gradient(135deg, var(--color-gray-50) 0%, #f0f4f8 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .role-detail-header h3 {
+            margin: 0;
+            font-size: var(--font-size-sm);
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .role-id-badge {
+            font-size: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--color-gray-200);
+            padding: 1px 6px;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-weight: var(--font-weight-normal);
+        }
+
+        /* Two sub-panels stacked */
+        .detail-sub-panels {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            max-height: calc(100vh - 300px);
+        }
+
+        .detail-sub-panel {
+            overflow-y: auto;
+            padding: var(--space-3) var(--space-4);
+        }
+
+        .detail-sub-panel:first-child {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-sub-panel h4 {
+            font-size: 11px;
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 var(--space-2) 0;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            position: sticky;
+            top: 0;
+            background: var(--bg-surface);
+            padding-bottom: var(--space-2);
+            z-index: 1;
+        }
+
+        .detail-count {
+            font-size: 10px;
+            background: var(--color-gray-200);
+            padding: 0 5px;
+            border-radius: var(--radius-full);
+            color: var(--text-secondary);
+        }
+
+        /* Menu tree items - compact */
+        .menu-tree-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: 2px var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            transition: background var(--transition-fast);
+        }
+
+        .menu-tree-item:hover {
+            background: var(--color-gray-50);
+        }
+
+        .menu-tree-item .menu-name {
+            flex: 1;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Auth badges - compact */
+        .auth-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 6px;
+            border-radius: var(--radius-full);
+            font-size: 10px;
+            font-weight: var(--font-weight-semibold);
+            white-space: nowrap;
+        }
+
+        .auth-badge-A { background: #dbeafe; color: #1e40af; }
+        .auth-badge-E { background: #d1fae5; color: #059669; }
+        .auth-badge-Q { background: #fef3c7; color: #b45309; }
+        .auth-badge-N { background: var(--color-gray-100); color: var(--color-gray-400); }
+
+        /* User items - compact */
+        .user-dept-group { margin-bottom: var(--space-2); }
+        .user-dept-group:last-child { margin-bottom: 0; }
+
+        .user-dept-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: var(--space-1) 0;
+            font-size: 11px;
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color-light);
+            margin-bottom: 2px;
+        }
+
+        .user-dept-header .dept-count {
+            font-size: 10px;
+            font-weight: var(--font-weight-normal);
+            background: var(--color-gray-200);
+            padding: 0 5px;
+            border-radius: var(--radius-full);
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: 1px var(--space-2);
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .user-item .user-id {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* Loading */
+        .detail-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-6);
+            color: var(--text-muted);
+            gap: var(--space-2);
+            font-size: var(--font-size-sm);
+        }
+
+        .detail-loading .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-gray-200);
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Empty placeholder */
+        .detail-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 300px;
+            color: var(--text-muted);
+            text-align: center;
+            gap: var(--space-2);
+        }
+
+        .detail-placeholder svg {
+            opacity: 0.3;
+        }
+
+        .detail-placeholder p {
+            font-size: var(--font-size-sm);
+            margin: 0;
+        }
+
+        /* View toggle */
+        .view-toggle {
+            display: inline-flex;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .view-toggle-btn {
+            padding: 3px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            border: none;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .view-toggle-btn:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .view-toggle-btn:hover {
+            background: var(--color-gray-100);
+        }
+
+        .view-toggle-btn.active {
+            background: var(--color-primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Matrix view */
+        .matrix-container {
+            display: none;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            background: var(--bg-surface);
+        }
+
+        .matrix-container.visible {
+            display: block;
+        }
+
+        .matrix-toolbar {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%);
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .matrix-toolbar .matrix-info {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: auto;
+            font-weight: 500;
+        }
+
+        .matrix-scroll {
+            overflow: auto;
+            max-height: calc(100vh - 180px);
+        }
+
+        .matrix-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+            min-width: 100%;
+        }
+
+        /* --- Header --- */
+        .matrix-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .matrix-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #1e3a5f;
+            color: #fff;
+            padding: 0;
+            border: none;
+            border-right: 1px solid rgba(255,255,255,0.15);
+            border-bottom: 2px solid #152d4a;
+            font-weight: 600;
+            white-space: nowrap;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .matrix-table thead th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background: #152b45;
+            text-align: left;
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
+            padding: 6px 8px;
+            font-size: 11px;
+            vertical-align: bottom;
+        }
+
+        /* NO column - header & body */
+        .matrix-table .col-no {
+            width: 30px;
+            min-width: 30px;
+            max-width: 30px;
+            text-align: center;
+            padding: 2px 0 !important;
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+        }
+        .matrix-table tbody .col-no {
+            font-size: 10px;
+            color: #9ca3af;
+            background: #f9fafb;
+            border-right: 1px solid #d1d5db;
+        }
+        .matrix-table tbody tr:nth-child(even) .col-no {
+            background: #f3f4f6;
+        }
+
+        /* Count column - header & body */
+        .matrix-table .col-count {
+            width: 36px;
+            min-width: 36px;
+            max-width: 36px;
+            text-align: center;
+            padding: 2px 0 !important;
+        }
+        .matrix-table thead .col-count {
+            background: #2a4a6b;
+            color: #fcd34d;
+            font-weight: 700;
+            font-size: 10px;
+        }
+        .matrix-table tbody .col-count {
+            background: #fffbeb;
+            font-weight: 700;
+            color: #b45309;
+            font-size: 11px;
+            border-right: 2px solid #e5c97a;
+        }
+        .matrix-table tbody tr:nth-child(even) .col-count {
+            background: #fef9e7;
+        }
+
+        /* Department header - vertical text */
+        .matrix-table thead th.dept-col {
+            padding: 2px 1px;
+            min-width: 28px;
+            width: 28px;
+            height: 80px;
+            vertical-align: bottom;
+            cursor: default;
+            overflow: hidden;
+        }
+
+        .matrix-table thead th.dept-col .dept-label-wrap {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .matrix-table thead th.dept-col .dept-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            line-height: 1;
+            letter-spacing: .2px;
+            color: #f1f5f9;
+            text-shadow: 0 1px 2px rgba(0,0,0,.3);
+            max-height: 72px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- Body --- */
+        .matrix-table tbody td {
+            padding: 0;
+            height: 20px;
+            border-right: 1px solid #edf0f4;
+            border-bottom: 1px solid #edf0f4;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 11px;
+        }
+
+        .matrix-table tbody tr:nth-child(even) td {
+            background: #fafbfc;
+        }
+
+        .matrix-table tbody tr:nth-child(even) td:first-child {
+            background: #f4f6f8;
+        }
+
+        .matrix-table tbody td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: #fff;
+            text-align: left;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #1f2937;
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-right: 2px solid #d1d5db;
+        }
+
+        /* hover crosshair effect */
+        .matrix-table tbody tr:hover td {
+            background-color: #eef4ff;
+        }
+        .matrix-table tbody tr:hover td:first-child {
+            background-color: #dbeafe;
+        }
+
+        /* O mark */
+        .matrix-cell-o {
+            color: #1e40af;
+            font-weight: 800;
+            font-size: 12px;
+            line-height: 20px;
+        }
+
+        /* Dept footer count row */
+        .matrix-table tfoot td {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            background: #1e3a5f;
+            color: #fff;
+            font-weight: 600;
+            font-size: 10px;
+            text-align: center;
+            padding: 4px 2px;
+            border: none;
+            border-right: 1px solid rgba(255,255,255,0.15);
+            border-top: 2px solid #152d4a;
+        }
+        .matrix-table tfoot td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 6;
+            background: #152b45;
+            text-align: right;
+            padding-right: 10px;
+            font-size: 11px;
+        }
+        .matrix-table tfoot .col-count {
+            background: #2a4a6b !important;
+            color: #fcd34d;
+            font-weight: 700;
+        }
+
+        /* Column hover highlight */
+        .matrix-table tbody td.col-hl {
+            background-color: rgba(59, 130, 246, 0.10) !important;
+        }
+        .matrix-table tbody tr:hover td.col-hl {
+            background-color: rgba(59, 130, 246, 0.22) !important;
+        }
+
+        /* Group tabs */
+        .group-tab-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: var(--space-2) var(--space-3);
+            background: var(--color-gray-50);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .group-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            background: var(--bg-surface);
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .group-tab:hover {
+            border-color: var(--color-primary-light);
+            color: var(--color-primary);
+            background: #eef2ff;
+        }
+
+        .group-tab.active {
+            background: var(--color-primary);
+            color: var(--color-white);
+            border-color: var(--color-primary);
+            font-weight: var(--font-weight-semibold);
+        }
+
+        .group-tab .group-count {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .group-tab.active .group-count {
+            opacity: 0.9;
+        }
+
+        /* Sortable column header */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background-color: var(--color-gray-200);
+        }
+
+        th.sortable .sort-indicator {
+            margin-left: 2px;
+            font-size: 9px;
+            opacity: 0.4;
+        }
+
+        th.sortable.sort-asc .sort-indicator,
+        th.sortable.sort-desc .sort-indicator {
+            opacity: 1;
+            color: var(--color-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .role-main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .role-detail-side {
+                position: static;
+            }
+
+            .detail-sub-panels {
+                max-height: 500px;
+            }
+        }
+
+        /* menu-tree-item highlight for scroll target */
+        .menu-tree-item.menu-scroll-target {
+            animation: menuHighlight 1.5s ease-out;
+        }
+
+        @keyframes menuHighlight {
+            0% { background: #fbbf24; }
+            100% { background: transparent; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container" role="alert" aria-live="polite"></div>
+
+    <div class="container">
+        <header>
+            <h1>
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Role 관리
+            </h1>
+            <nav role="navigation" aria-label="메인 네비게이션">
+                <a href="index.html" class="active" aria-current="page">Role 관리</a>
+            </nav>
+        </header>
+
+        <!-- Action Bar (search + buttons) -->
+        <div class="role-action-bar">
+            <div class="filter-group">
+                <input type="text" id="searchInput" class="role-search-input" placeholder="Role ID / Role명 검색...">
+                <input type="text" id="menuSearchInput" class="role-search-input" placeholder="메뉴명 검색..." style="width:160px;">
+                <input type="text" id="userSearchInput" class="role-search-input" placeholder="사용자명 / ID 검색..." style="width:180px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" id="btnViewList" onclick="switchView('list')">목록</button>
+                    <button class="view-toggle-btn" id="btnViewMatrix" onclick="switchView('matrix')">Matrix</button>
+                </div>
+                <button class="btn btn-success" id="btnExport" title="엑셀 내보내기" disabled style="padding: var(--space-1) var(--space-3); font-size: var(--font-size-xs);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    엑셀
+                </button>
+            </div>
+        </div>
+
+        <!-- Main 2-column layout -->
+        <div class="role-main-layout">
+            <!-- Left: Role List -->
+            <div class="role-list-panel">
+                <div id="groupTabBar" class="group-tab-bar" style="display:none;"></div>
+                <div class="data-table-wrapper">
+                    <div class="role-list-scroll">
+                        <table class="role-table" id="roleTable">
+                            <colgroup>
+                                <col class="col-no">
+                                <col class="col-role-id">
+                                <col class="col-role-name">
+                                <col class="col-count">
+                                <col class="col-count">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>NO</th>
+                                    <th class="sortable" data-field="roleId">ROLE ID <span class="sort-indicator">&#9650;</span></th>
+                                    <th class="sortable" data-field="roleName">ROLE명 <span class="sort-indicator">&#9650;</span></th>
+                                    <th class="sortable" data-field="userCount">사용자 <span class="sort-indicator">&#9650;</span></th>
+                                    <th class="sortable" data-field="menuCount">메뉴 <span class="sort-indicator">&#9650;</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted" style="padding: var(--space-6); font-size: var(--font-size-sm);">
+                                        데이터 로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Detail (Menus + Users) -->
+            <div class="role-detail-side" id="roleDetailSide">
+                <!-- Placeholder when no role selected -->
+                <div id="detailPlaceholder" class="detail-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <p>좌측 Role을 클릭하면<br>메뉴 권한과 사용자를 확인할 수 있습니다.</p>
+                </div>
+
+                <!-- Detail content (hidden initially) -->
+                <div id="detailContent" style="display: none;">
+                    <div class="role-detail-header">
+                        <h3>
+                            <span id="detailRoleName">-</span>
+                            <span class="role-id-badge" id="detailRoleId">-</span>
+                        </h3>
+                    </div>
+                    <div class="detail-sub-panels">
+                        <!-- Menu panel -->
+                        <div class="detail-sub-panel" id="detailMenus">
+                            <h4>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/>
+                                </svg>
+                                메뉴 권한 <span class="detail-count" id="menuCountBadge">0</span>
+                            </h4>
+                            <div id="menuTreeContainer"></div>
+                        </div>
+                        <!-- User panel -->
+                        <div class="detail-sub-panel" id="detailUsers">
+                            <h4>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                </svg>
+                                사용자 <span class="detail-count" id="userCountBadge">0</span>
+                            </h4>
+                            <div id="userListContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Matrix View -->
+        <div class="matrix-container" id="matrixContainer">
+            <div class="matrix-toolbar">
+                <input type="text" id="matrixRoleSearch" class="role-search-input" placeholder="Role명 필터..." style="width:180px;" oninput="debounceMatrix()">
+                <input type="text" id="matrixDeptSearch" class="role-search-input" placeholder="부서명 필터..." style="width:150px;" oninput="debounceMatrix()">
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:#64748b; cursor:pointer;">
+                    <input type="checkbox" id="matrixHideEmpty" onchange="renderMatrix()" style="margin:0;">
+                    빈 행 숨기기
+                </label>
+                <button class="btn btn-success" onclick="exportMatrixExcel()" style="padding:3px 10px; font-size:11px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    엑셀
+                </button>
+                <span class="matrix-info" id="matrixInfo"></span>
+            </div>
+            <div class="matrix-scroll" id="matrixScroll">
+                <div style="padding:40px; text-align:center; color:var(--text-muted); font-size:13px;">
+                    데이터 로딩 중...
+                </div>
+            </div>
+        </div>
+
+    <script>
+        // ============================================================
+        // App State
+        // ============================================================
+        const AppState = {
+            roles: [],
+            filteredRoles: [],
+            selectedRoleId: null,
+            selectedGroup: null, // null = 전체
+            groups: [],          // [{name, count}]
+            roleMenuCache: {},   // roleId -> menus[]
+            roleUserCache: {},   // roleId -> users[]
+            allDataLoaded: false, // true after preload
+            sortField: 'roleName',
+            sortDirection: 'asc',
+            isLoading: false
+        };
+
+        const API_BASE = 'https://habitree.app.n8n.cloud/webhook/role-management';
+        const CACHE_TTL = 30 * 60 * 1000; // 30분
+
+        // file:// 또는 origin null 이면 true (CORS 프록시 사용 대상)
+        function needCorsProxy() {
+            return !window.location.origin || window.location.origin === 'null' || window.location.protocol === 'file:';
+        }
+
+        const CORS_PROXIES = [
+            '', // 직접 호출 우선 시도 (n8n 웹훅은 CORS 헤더 포함)
+            'https://corsproxy.io/?url=',
+            'https://api.allorigins.win/raw?url='
+        ];
+
+        async function fetchWithCorsProxy(actualUrl, fetchOptions = {}) {
+            if (!needCorsProxy()) {
+                return fetch(actualUrl, fetchOptions);
+            }
+            let lastError = null;
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                const prefix = CORS_PROXIES[i];
+                const isDirect = !prefix;
+                const proxyUrl = isDirect ? actualUrl : prefix + encodeURIComponent(actualUrl);
+                const label = isDirect ? '직접 호출' : prefix;
+                try {
+                    console.log(`[CORS] Trying ${i + 1}/${CORS_PROXIES.length}: ${label}`);
+                    const resp = await fetch(proxyUrl, fetchOptions);
+                    if (resp.ok) {
+                        console.log(`[CORS] Success with ${i + 1}: ${label}`);
+                        return resp;
+                    }
+                    console.warn(`[CORS] ${label} returned ${resp.status}`);
+                    lastError = new Error(`${isDirect ? 'Direct' : 'Proxy'} returned ${resp.status}`);
+                } catch (err) {
+                    console.warn(`[CORS] ${label} failed:`, err.message);
+                    lastError = err;
+                }
+            }
+            throw lastError || new Error('All CORS proxies failed');
+        }
+
+        // ============================================================
+        // Cache Utilities
+        // ============================================================
+        function getCachedData(key) {
+            try {
+                const raw = localStorage.getItem('rm_' + key);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (Date.now() - parsed.timestamp > CACHE_TTL) {
+                    localStorage.removeItem('rm_' + key);
+                    return null;
+                }
+                return parsed.data;
+            } catch { return null; }
+        }
+
+        function setCachedData(key, data) {
+            try {
+                localStorage.setItem('rm_' + key, JSON.stringify({ data, timestamp: Date.now() }));
+            } catch { /* quota exceeded - ignore */ }
+        }
+
+        function clearAllCache() {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('rm_')) keys.push(k);
+            }
+            keys.forEach(k => localStorage.removeItem(k));
+        }
+
+        function groupByRoleId(flatArray) {
+            const map = {};
+            flatArray.forEach(item => {
+                const rid = item.roleId;
+                if (!map[rid]) map[rid] = [];
+                map[rid].push(item);
+            });
+            return map;
+        }
+
+        // ============================================================
+        // Toast Notification
+        // ============================================================
+        function showToast(title, message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const iconMap = {
+                success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+                error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+                warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+                info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+            };
+
+            toast.innerHTML = `
+                ${iconMap[type] || iconMap.info}
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.classList.add('toast-out'); setTimeout(() => this.parentElement.remove(), 200)">&times;</button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.add('toast-out');
+                    setTimeout(() => toast.remove(), 200);
+                }
+            }, 4000);
+        }
+
+        // ============================================================
+        // Data Fetching
+        // ============================================================
+        async function fetchAPI(operation, params = {}) {
+            const url = new URL(API_BASE);
+            url.searchParams.set('operation', operation);
+            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+            const response = await fetchWithCorsProxy(url.toString());
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            if (!text || text.trim() === '') throw new Error('서버 응답이 비어 있습니다. 잠시 후 다시 시도해주세요.');
+            const result = JSON.parse(text);
+            if (!result.success) throw new Error(result.error || 'API error');
+            return result;
+        }
+
+        async function loadRoleList(forceRefresh = false) {
+            if (AppState.isLoading) return;
+
+            // 캐시 확인 (강제 새로고침이 아닐 때)
+            if (!forceRefresh) {
+                const cachedRoles = getCachedData('roles');
+                const cachedMenus = getCachedData('allMenus');
+                const cachedUsers = getCachedData('allUsers');
+                if (cachedRoles && cachedMenus && cachedUsers) {
+                    AppState.roles = cachedRoles;
+                    AppState.roleMenuCache = cachedMenus;
+                    AppState.roleUserCache = cachedUsers;
+                    AppState.allDataLoaded = true;
+                    AppState.selectedRoleId = null;
+                    AppState.selectedGroup = null;
+                    document.getElementById('detailContent').style.display = 'none';
+                    document.getElementById('detailPlaceholder').style.display = '';
+                    buildGroups();
+                    filterRoles();
+                    document.getElementById('btnExport').disabled = false;
+                    if (document.getElementById('matrixContainer').classList.contains('visible')) {
+                        renderMatrix();
+                    }
+                    showToast('캐시 데이터', `${AppState.roles.length}개 Role 로드됨`, 'info');
+                    return;
+                }
+            }
+
+            AppState.isLoading = true;
+
+            try {
+                // 3개 API 병렬 호출: list + allMenus + allUsers
+                const [listResult, menusResult, usersResult] = await Promise.all([
+                    fetchAPI('list'),
+                    fetchAPI('allMenus'),
+                    fetchAPI('allUsers')
+                ]);
+
+                AppState.roles = listResult.data || [];
+                AppState.roleMenuCache = groupByRoleId(menusResult.data || []);
+                AppState.roleUserCache = groupByRoleId(usersResult.data || []);
+                AppState.allDataLoaded = true;
+                AppState.selectedRoleId = null;
+                AppState.selectedGroup = null;
+
+                // localStorage 캐싱
+                setCachedData('roles', AppState.roles);
+                setCachedData('allMenus', AppState.roleMenuCache);
+                setCachedData('allUsers', AppState.roleUserCache);
+
+                document.getElementById('detailContent').style.display = 'none';
+                document.getElementById('detailPlaceholder').style.display = '';
+
+                buildGroups();
+                filterRoles();
+                document.getElementById('btnExport').disabled = false;
+                // Matrix 뷰가 활성 상태면 렌더
+                if (document.getElementById('matrixContainer').classList.contains('visible')) {
+                    renderMatrix();
+                }
+                showToast('조회 완료', `${AppState.roles.length}개 Role 전체 로드 완료`, 'success');
+            } catch (err) {
+                console.error('Role 목록 조회 실패:', err);
+                showToast('조회 실패', err.message, 'error');
+            } finally {
+                AppState.isLoading = false;
+            }
+        }
+
+        // ============================================================
+        // Group Logic
+        // ============================================================
+        function extractGroup(roleName) {
+            if (!roleName) return '기타';
+            // Pattern: "숫자.그룹명_세부명" or "-.그룹명_세부명" or "z.그룹명_세부명"
+            const underscoreIdx = roleName.indexOf('_');
+            if (underscoreIdx > 0) {
+                return roleName.substring(0, underscoreIdx);
+            }
+            // No underscore - check if starts with prefix pattern like "0.", "1.", "-."
+            const prefixMatch = roleName.match(/^[\d\-a-zA-Z]+\./);
+            if (prefixMatch) {
+                return roleName; // whole name is the group
+            }
+            return '기타';
+        }
+
+        function buildGroups() {
+            const groupMap = {};
+            AppState.roles.forEach(r => {
+                const g = extractGroup(r.roleName);
+                if (!groupMap[g]) groupMap[g] = 0;
+                groupMap[g]++;
+            });
+
+            AppState.groups = Object.entries(groupMap)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            renderGroupTabs();
+        }
+
+        function renderGroupTabs() {
+            const bar = document.getElementById('groupTabBar');
+            if (AppState.groups.length <= 1) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = '';
+
+            const allActive = AppState.selectedGroup === null ? 'active' : '';
+            let html = `<span class="group-tab ${allActive}" onclick="selectGroup(null)">전체 <span class="group-count">${AppState.roles.length}</span></span>`;
+
+            html += AppState.groups.map(g => {
+                const isActive = AppState.selectedGroup === g.name ? 'active' : '';
+                return `<span class="group-tab ${isActive}" onclick="selectGroup('${escapeHtml(g.name)}')">${escapeHtml(g.name)} <span class="group-count">${g.count}</span></span>`;
+            }).join('');
+
+            bar.innerHTML = html;
+        }
+
+        function selectGroup(groupName) {
+            AppState.selectedGroup = groupName;
+            AppState.selectedRoleId = null;
+            document.getElementById('detailContent').style.display = 'none';
+            document.getElementById('detailPlaceholder').style.display = '';
+            renderGroupTabs();
+            filterRoles();
+        }
+
+        // ============================================================
+        // Filter & Sort
+        // ============================================================
+        function filterRoles() {
+            const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            const menuSearch = document.getElementById('menuSearchInput').value.trim().toLowerCase();
+            const userSearch = document.getElementById('userSearchInput').value.trim().toLowerCase();
+            const group = AppState.selectedGroup;
+
+            AppState.filteredRoles = AppState.roles.filter(r => {
+                if (group !== null && extractGroup(r.roleName) !== group) return false;
+                if (search) {
+                    const matchRole = (r.roleId || '').toLowerCase().includes(search) ||
+                                      (r.roleName || '').toLowerCase().includes(search);
+                    if (!matchRole) return false;
+                }
+                // 메뉴명 검색: 캐시된 메뉴 데이터에서 검색
+                if (menuSearch && AppState.allDataLoaded) {
+                    const menus = AppState.roleMenuCache[r.roleId] || [];
+                    const hasMenu = menus.some(m =>
+                        (m.menuName || '').toLowerCase().includes(menuSearch) ||
+                        (m.menuPath || '').toLowerCase().includes(menuSearch)
+                    );
+                    if (!hasMenu) return false;
+                }
+                // 사용자 검색: 캐시된 사용자 데이터에서 검색
+                if (userSearch && AppState.allDataLoaded) {
+                    const users = AppState.roleUserCache[r.roleId] || [];
+                    const hasUser = users.some(u =>
+                        (u.userName || '').toLowerCase().includes(userSearch) ||
+                        (u.userId || '').toLowerCase().includes(userSearch) ||
+                        (u.deptName || '').toLowerCase().includes(userSearch)
+                    );
+                    if (!hasUser) return false;
+                }
+                return true;
+            });
+
+            sortRoles();
+            renderRoleTable(AppState.filteredRoles);
+        }
+
+        function sortRoles() {
+            const { sortField, sortDirection } = AppState;
+            AppState.filteredRoles.sort((a, b) => {
+                let va = a[sortField], vb = b[sortField];
+                if (typeof va === 'string') va = va.toLowerCase();
+                if (typeof vb === 'string') vb = vb.toLowerCase();
+                if (va == null) va = '';
+                if (vb == null) vb = '';
+                if (va < vb) return sortDirection === 'asc' ? -1 : 1;
+                if (va > vb) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function handleSort(field) {
+            if (AppState.sortField === field) {
+                AppState.sortDirection = AppState.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                AppState.sortField = field;
+                AppState.sortDirection = 'asc';
+            }
+
+            document.querySelectorAll('.role-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                const indicator = th.querySelector('.sort-indicator');
+                if (th.dataset.field === field) {
+                    th.classList.add(AppState.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    indicator.innerHTML = AppState.sortDirection === 'asc' ? '&#9650;' : '&#9660;';
+                } else {
+                    indicator.innerHTML = '&#9650;';
+                }
+            });
+
+            filterRoles();
+        }
+
+        // ============================================================
+        // Render Role Table
+        // ============================================================
+        function renderRoleTable(roles) {
+            const tbody = document.getElementById('roleTableBody');
+
+            if (!roles || roles.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted" style="padding: var(--space-6); font-size: var(--font-size-sm);">
+                            ${AppState.roles.length === 0 ? '데이터 로딩 중...' : '검색 결과가 없습니다.'}
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            const html = roles.map((role, idx) => {
+                const isSelected = AppState.selectedRoleId === role.roleId;
+                // When a group is selected, show only the part after "_"
+                let displayName = role.roleName || '';
+                if (AppState.selectedGroup && displayName.includes('_')) {
+                    displayName = displayName.substring(displayName.indexOf('_') + 1);
+                }
+                return `
+                <tr class="${isSelected ? 'selected-role' : ''}" onclick="selectRole('${escapeHtml(role.roleId)}')">
+                    <td class="text-center">${idx + 1}</td>
+                    <td class="font-mono" style="font-size: 11px;">${escapeHtml(role.roleId)}</td>
+                    <td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;" title="${escapeHtml(role.roleName || '')}">${escapeHtml(displayName)}</td>
+                    <td class="text-center"><span class="count-badge count-badge-users">${role.userCount || 0}</span></td>
+                    <td class="text-center"><span class="count-badge count-badge-menus">${role.menuCount || 0}</span></td>
+                </tr>`;
+            }).join('');
+
+            tbody.innerHTML = html;
+        }
+
+        // ============================================================
+        // Select Role -> Load Detail on Right
+        // ============================================================
+        function selectRole(roleId) {
+            if (AppState.selectedRoleId === roleId) return;
+
+            AppState.selectedRoleId = roleId;
+            renderRoleTable(AppState.filteredRoles);
+
+            const role = AppState.roles.find(r => r.roleId === roleId);
+            document.getElementById('detailRoleName').textContent = role ? role.roleName : roleId;
+            document.getElementById('detailRoleId').textContent = roleId;
+
+            document.getElementById('detailPlaceholder').style.display = 'none';
+            document.getElementById('detailContent').style.display = '';
+
+            const menus = AppState.roleMenuCache[roleId] || [];
+            const users = AppState.roleUserCache[roleId] || [];
+            renderMenuTree(menus);
+            renderUserList(users);
+
+            // 메뉴 검색어가 있으면 첫 매칭 메뉴로 스크롤
+            scrollToFirstMenuMatch();
+        }
+
+        function scrollToFirstMenuMatch() {
+            const menuSearch = document.getElementById('menuSearchInput').value.trim().toLowerCase();
+            if (!menuSearch) return;
+
+            requestAnimationFrame(() => {
+                const match = document.querySelector('#menuTreeContainer .menu-tree-item[data-menu-match="true"]');
+                if (match) {
+                    const panel = document.getElementById('detailMenus');
+                    match.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    match.classList.add('menu-scroll-target');
+                    setTimeout(() => match.classList.remove('menu-scroll-target'), 1500);
+                }
+            });
+        }
+
+        // ============================================================
+        // Build Menu Tree with Parent Nodes
+        // ============================================================
+        function buildMenuTreeWithParents(menus) {
+            if (!menus || menus.length === 0) return [];
+
+            // menuPath 기반으로 상위 메뉴 노드 자동 생성
+            const existingPaths = new Set(menus.map(m => m.menuPath));
+            const parentNodes = new Map(); // path -> node
+
+            menus.forEach(menu => {
+                const parts = (menu.menuPath || '').split(' > ');
+                // 상위 경로 생성 (마지막 요소 제외)
+                for (let i = 1; i < parts.length; i++) {
+                    const parentPath = parts.slice(0, i).join(' > ');
+                    if (!existingPaths.has(parentPath) && !parentNodes.has(parentPath)) {
+                        parentNodes.set(parentPath, {
+                            menuId: '__parent_' + parentPath,
+                            menuName: parts[i - 1],
+                            menuPath: parentPath,
+                            depth: i - 1,
+                            actionId: null,
+                            actionName: null,
+                            isParent: true
+                        });
+                    }
+                }
+            });
+
+            // 원본 메뉴 + 상위 메뉴 병합 후 menuPath 정렬
+            const all = [...parentNodes.values(), ...menus];
+            all.sort((a, b) => (a.menuPath || '').localeCompare(b.menuPath || ''));
+            return all;
+        }
+
+        // ============================================================
+        // Render Menu Tree
+        // ============================================================
+        function renderMenuTree(menus) {
+            const container = document.getElementById('menuTreeContainer');
+            const realCount = menus ? menus.length : 0;
+            document.getElementById('menuCountBadge').textContent = realCount;
+
+            if (!menus || menus.length === 0) {
+                container.innerHTML = '<div style="padding:var(--space-4); color:var(--text-muted); font-size:12px; text-align:center;">권한이 부여된 메뉴가 없습니다.</div>';
+                return;
+            }
+
+            const treeMenus = buildMenuTreeWithParents(menus);
+            const menuSearch = document.getElementById('menuSearchInput').value.trim().toLowerCase();
+
+            const html = treeMenus.map(menu => {
+                const indent = (menu.depth || 0) * 16;
+
+                if (menu.isParent) {
+                    return `
+                <div class="menu-tree-item" style="padding-left:${indent + 8}px; color:var(--text-muted); font-size:11px;" title="${escapeHtml(menu.menuPath || '')}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5; flex-shrink:0;">
+                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                    </svg>
+                    <span class="menu-name" style="color:var(--text-muted); font-weight:500;">${escapeHtml(menu.menuName || '')}</span>
+                </div>`;
+                }
+
+                const badgeClass = `auth-badge-${menu.actionId || 'N'}`;
+                const isMatch = menuSearch && (
+                    (menu.menuName || '').toLowerCase().includes(menuSearch) ||
+                    (menu.menuPath || '').toLowerCase().includes(menuSearch)
+                );
+                const highlight = isMatch ? 'background:#fff3cd; font-weight:600;' : '';
+                const matchAttr = isMatch ? ' data-menu-match="true"' : '';
+                return `
+                <div class="menu-tree-item" style="padding-left:${indent + 8}px; ${highlight}" title="${escapeHtml(menu.menuPath || '')}"${matchAttr}>
+                    <span class="menu-name">${escapeHtml(menu.menuName || '')}</span>
+                    <span class="auth-badge ${badgeClass}">${escapeHtml(menu.actionName || '')}</span>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // ============================================================
+        // Render User List
+        // ============================================================
+        function renderUserList(users) {
+            const container = document.getElementById('userListContainer');
+            document.getElementById('userCountBadge').textContent = users.length;
+
+            if (!users || users.length === 0) {
+                container.innerHTML = '<div style="padding:var(--space-4); color:var(--text-muted); font-size:12px; text-align:center;">배정된 사용자가 없습니다.</div>';
+                return;
+            }
+
+            const groups = {};
+            users.forEach(u => {
+                const dept = u.deptName || 'Unknown';
+                if (!groups[dept]) groups[dept] = [];
+                groups[dept].push(u);
+            });
+
+            const sortedDepts = Object.keys(groups).sort();
+
+            const html = sortedDepts.map(dept => {
+                const deptUsers = groups[dept];
+                const userHtml = deptUsers.map(u => `
+                    <div class="user-item">
+                        <span>${escapeHtml(u.userName || '')}</span>
+                        <span class="user-id">(${escapeHtml(u.userId || '')})</span>
+                    </div>
+                `).join('');
+
+                return `
+                <div class="user-dept-group">
+                    <div class="user-dept-header">
+                        ${escapeHtml(dept)}
+                        <span class="dept-count">${deptUsers.length}</span>
+                    </div>
+                    ${userHtml}
+                </div>`;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // ============================================================
+        // View Toggle (List <-> Matrix)
+        // ============================================================
+        function switchView(view) {
+            const listView = document.querySelector('.role-main-layout');
+            const matrixView = document.getElementById('matrixContainer');
+            const btnList = document.getElementById('btnViewList');
+            const btnMatrix = document.getElementById('btnViewMatrix');
+
+            if (view === 'matrix') {
+                listView.style.display = 'none';
+                matrixView.classList.add('visible');
+                btnList.classList.remove('active');
+                btnMatrix.classList.add('active');
+                if (AppState.allDataLoaded) renderMatrix();
+            } else {
+                listView.style.display = '';
+                matrixView.classList.remove('visible');
+                btnList.classList.add('active');
+                btnMatrix.classList.remove('active');
+            }
+        }
+
+        // ============================================================
+        // Matrix Rendering
+        // ============================================================
+        function buildMatrixData() {
+            // Collect all departments from all users
+            const deptSet = new Set();
+            const roleDeptMap = {}; // roleId -> Set of depts
+
+            AppState.roles.forEach(role => {
+                const users = AppState.roleUserCache[role.roleId] || [];
+                const depts = new Set();
+                users.forEach(u => {
+                    const dept = (u.deptName || '').trim();
+                    if (dept) {
+                        deptSet.add(dept);
+                        depts.add(dept);
+                    }
+                });
+                roleDeptMap[role.roleId] = depts;
+            });
+
+            const allDepts = Array.from(deptSet).sort();
+            return { allDepts, roleDeptMap };
+        }
+
+        let _matrixTimer;
+        function debounceMatrix() {
+            clearTimeout(_matrixTimer);
+            _matrixTimer = setTimeout(renderMatrix, 200);
+        }
+
+        function renderMatrix() {
+            if (!AppState.allDataLoaded) return;
+
+            const { allDepts, roleDeptMap } = buildMatrixData();
+
+            const roleFilter = (document.getElementById('matrixRoleSearch').value || '').trim().toLowerCase();
+            const deptFilter = (document.getElementById('matrixDeptSearch').value || '').trim().toLowerCase();
+
+            const filteredDepts = deptFilter
+                ? allDepts.filter(d => d.toLowerCase().includes(deptFilter))
+                : allDepts;
+
+            const hideEmpty = document.getElementById('matrixHideEmpty').checked;
+
+            let filteredRoles = AppState.roles.filter(r => {
+                if (roleFilter) {
+                    return (r.roleName || '').toLowerCase().includes(roleFilter) ||
+                           (r.roleId || '').toLowerCase().includes(roleFilter);
+                }
+                return true;
+            });
+
+            // 빈 행 숨기기: 어떤 부서에도 매핑 없는 Role 제거
+            if (hideEmpty) {
+                filteredRoles = filteredRoles.filter(r => {
+                    const depts = roleDeptMap[r.roleId] || new Set();
+                    return filteredDepts.some(d => depts.has(d));
+                });
+            }
+
+            if (filteredDepts.length === 0 || filteredRoles.length === 0) {
+                document.getElementById('matrixScroll').innerHTML =
+                    '<div style="padding:40px; text-align:center; color:var(--text-muted);">필터 조건에 맞는 데이터가 없습니다.</div>';
+                document.getElementById('matrixInfo').textContent = '';
+                return;
+            }
+
+            // Build header
+            let html = '<table class="matrix-table"><thead><tr>';
+            html += '<th>ROLE명</th>';
+            html += '<th class="col-no">NO</th>';
+            html += '<th class="col-count">합계</th>';
+            filteredDepts.forEach(d => {
+                html += `<th class="dept-col" title="${escapeHtml(d)}"><div class="dept-label-wrap"><span class="dept-label">${escapeHtml(d)}</span></div></th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Track dept totals
+            const deptTotals = {};
+            filteredDepts.forEach(d => deptTotals[d] = 0);
+            let grandTotal = 0;
+
+            // Group separator tracking
+            let prevGroup = null;
+
+            // Build rows
+            filteredRoles.forEach((role, idx) => {
+                const depts = roleDeptMap[role.roleId] || new Set();
+                const curGroup = extractGroup(role.roleName);
+
+                // Group separator line
+                if (prevGroup !== null && curGroup !== prevGroup) {
+                    html += `<tr class="matrix-group-sep"><td colspan="${filteredDepts.length + 3}" style="height:3px; background:#cbd5e1; padding:0; border:none;"></td></tr>`;
+                }
+                prevGroup = curGroup;
+
+                let count = 0;
+                let cells = '';
+                filteredDepts.forEach(d => {
+                    if (depts.has(d)) {
+                        cells += '<td class="matrix-cell-o">O</td>';
+                        count++;
+                        deptTotals[d]++;
+                    } else {
+                        cells += '<td></td>';
+                    }
+                });
+                grandTotal += count;
+
+                html += `<tr>`;
+                html += `<td title="${escapeHtml(role.roleName || '')}">${escapeHtml(role.roleName || '')}</td>`;
+                html += `<td class="col-no">${idx + 1}</td>`;
+                html += `<td class="col-count">${count || ''}</td>`;
+                html += cells;
+                html += '</tr>';
+            });
+
+            html += '</tbody>';
+
+            // Footer: dept totals
+            html += '<tfoot><tr>';
+            html += `<td>부서별 합계</td>`;
+            html += `<td class="col-no"></td>`;
+            html += `<td class="col-count">${grandTotal}</td>`;
+            filteredDepts.forEach(d => {
+                html += `<td>${deptTotals[d] || ''}</td>`;
+            });
+            html += '</tr></tfoot>';
+
+            html += '</table>';
+            document.getElementById('matrixScroll').innerHTML = html;
+            document.getElementById('matrixInfo').textContent =
+                `${filteredRoles.length}개 Role  ×  ${filteredDepts.length}개 부서  |  총 ${grandTotal}개 매핑`;
+
+            // Column hover highlight
+            const table = document.querySelector('.matrix-table');
+            if (table) {
+                table.addEventListener('mouseover', function(e) {
+                    const td = e.target.closest('td, th');
+                    if (!td) return;
+                    const idx = td.cellIndex;
+                    if (idx < 3) return; // skip role-name, NO, count cols
+                    table.querySelectorAll('.col-hl').forEach(el => el.classList.remove('col-hl'));
+                    table.querySelectorAll(`tbody tr`).forEach(tr => {
+                        const cell = tr.cells[idx];
+                        if (cell) cell.classList.add('col-hl');
+                    });
+                });
+                table.addEventListener('mouseleave', function() {
+                    table.querySelectorAll('.col-hl').forEach(el => el.classList.remove('col-hl'));
+                });
+            }
+        }
+
+        // ============================================================
+        // Matrix Excel Export
+        // ============================================================
+        function exportMatrixExcel() {
+            if (!AppState.allDataLoaded) {
+                showToast('내보내기 실패', '데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            const { allDepts, roleDeptMap } = buildMatrixData();
+
+            const roleFilter = (document.getElementById('matrixRoleSearch').value || '').trim().toLowerCase();
+            const deptFilter = (document.getElementById('matrixDeptSearch').value || '').trim().toLowerCase();
+
+            const filteredDepts = deptFilter
+                ? allDepts.filter(d => d.toLowerCase().includes(deptFilter))
+                : allDepts;
+
+            const filteredRoles = AppState.roles.filter(r => {
+                if (roleFilter) {
+                    return (r.roleName || '').toLowerCase().includes(roleFilter) ||
+                           (r.roleId || '').toLowerCase().includes(roleFilter);
+                }
+                return true;
+            });
+
+            const rows = filteredRoles.map(role => {
+                const depts = roleDeptMap[role.roleId] || new Set();
+                const row = { 'USR_ROLE_NM': role.roleName || '' };
+                let count = 0;
+                filteredDepts.forEach(d => {
+                    if (depts.has(d)) {
+                        row[d] = 'O';
+                        count++;
+                    } else {
+                        row[d] = '';
+                    }
+                });
+                row['합계'] = count;
+                return row;
+            });
+
+            // Reorder columns: USR_ROLE_NM first, then departments
+            const header = ['USR_ROLE_NM', ...filteredDepts];
+            const ws = XLSX.utils.json_to_sheet(rows, { header });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Role-부서 Matrix');
+
+            ws['!cols'] = [{ wch: 40 }, ...filteredDepts.map(() => ({ wch: 12 }))];
+
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            XLSX.writeFile(wb, `Role_Matrix_${today}.xlsx`);
+            showToast('내보내기 완료', `${rows.length}개 Role × ${filteredDepts.length}개 부서`, 'success');
+        }
+
+        // ============================================================
+        // Excel Export
+        // ============================================================
+        function exportExcel() {
+            if (!AppState.filteredRoles || AppState.filteredRoles.length === 0) {
+                showToast('내보내기 실패', '데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            const data = AppState.filteredRoles.map((r, idx) => ({
+                'NO': idx + 1,
+                'ROLE ID': r.roleId,
+                'ROLE명': r.roleName || '',
+                '사용자 수': r.userCount || 0,
+                '메뉴 수': r.menuCount || 0
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Role 목록');
+
+            ws['!cols'] = [
+                { wch: 5 },
+                { wch: 30 },
+                { wch: 30 },
+                { wch: 10 },
+                { wch: 10 }
+            ];
+
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            XLSX.writeFile(wb, `Role_목록_${today}.xlsx`);
+            showToast('내보내기 완료', `${data.length}건 저장`, 'success');
+        }
+
+
+
+        // ============================================================
+        // Utility
+        // ============================================================
+        function escapeHtml(str) {
+            if (!str) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(str).replace(/[&<>"']/g, c => map[c]);
+        }
+
+        // ============================================================
+        // Event Listeners
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btnExport').addEventListener('click', exportExcel);
+
+            // 페이지 접속 시 자동으로 데이터 1회 조회
+            loadRoleList(false);
+
+            let searchTimeout;
+            document.getElementById('searchInput').addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(filterRoles, 300);
+            });
+
+            let menuSearchTimeout;
+            document.getElementById('menuSearchInput').addEventListener('input', () => {
+                clearTimeout(menuSearchTimeout);
+                menuSearchTimeout = setTimeout(() => {
+                    if (!AppState.allDataLoaded) {
+                        showToast('안내', '데이터 로딩이 완료된 후 검색 가능합니다.', 'warning');
+                        return;
+                    }
+                    filterRoles();
+                    // 현재 선택된 Role이 있으면 메뉴 트리 다시 렌더 + 스크롤
+                    if (AppState.selectedRoleId) {
+                        const menus = AppState.roleMenuCache[AppState.selectedRoleId] || [];
+                        renderMenuTree(menus);
+                        scrollToFirstMenuMatch();
+                    }
+                }, 300);
+            });
+
+            let userSearchTimeout;
+            document.getElementById('userSearchInput').addEventListener('input', () => {
+                clearTimeout(userSearchTimeout);
+                userSearchTimeout = setTimeout(() => {
+                    if (!AppState.allDataLoaded) {
+                        showToast('안내', '데이터 로딩이 완료된 후 검색 가능합니다.', 'warning');
+                        return;
+                    }
+                    filterRoles();
+                }, 300);
+            });
+
+            document.querySelectorAll('.role-table th.sortable').forEach(th => {
+                th.addEventListener('click', () => handleSort(th.dataset.field));
+            });
+
+            document.getElementById('searchInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); filterRoles(); }
+            });
+            document.getElementById('menuSearchInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    filterRoles();
+                    if (AppState.selectedRoleId) {
+                        const menus = AppState.roleMenuCache[AppState.selectedRoleId] || [];
+                        renderMenuTree(menus);
+                        scrollToFirstMenuMatch();
+                    }
+                }
+            });
+            document.getElementById('userSearchInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); filterRoles(); }
+            });
+        });
+    </script>
+</body>
+
+</html>
