@@ -741,6 +741,89 @@
             }
         }
 
+        /* Menu Auth - action badges */
+        .action-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: var(--font-weight-semibold);
+            white-space: nowrap;
+        }
+        .action-badge-A { background: #dcfce7; color: #166534; }
+        .action-badge-Q { background: #dbeafe; color: #1e40af; }
+        .action-badge-E { background: #fef3c7; color: #92400e; }
+        .action-badge-N { background: #f1f5f9; color: #64748b; }
+
+        #menuAuthTable tbody tr:hover { background: var(--color-gray-50); }
+        #menuAuthTable tbody td {
+            padding: var(--space-1) var(--space-2);
+            line-height: 1.4;
+            vertical-align: middle;
+        }
+        #menuAuthTable thead th {
+            padding: var(--space-2);
+            font-size: 11px;
+            white-space: nowrap;
+            background: var(--color-gray-50);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        #menuAuthTable tbody td.cell-role {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        #menuAuthTable tbody td.cell-role .role-id {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--text-primary);
+            font-weight: var(--font-weight-semibold);
+            display: block;
+            line-height: 1.3;
+        }
+        #menuAuthTable tbody td.cell-role .role-name {
+            color: var(--text-muted);
+            font-size: 10px;
+            display: block;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 210px;
+        }
+        #menuAuthTable thead th.ma-sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        #menuAuthTable thead th.ma-sortable:hover {
+            background: var(--color-gray-100);
+        }
+        #menuAuthTable thead th.ma-sortable .sort-indicator {
+            opacity: 0.35;
+            font-size: 9px;
+            margin-left: 3px;
+            letter-spacing: -2px;
+            color: var(--text-muted);
+        }
+        #menuAuthTable thead th.ma-sortable.sort-active .sort-indicator {
+            opacity: 1;
+            color: var(--color-primary);
+            font-size: 11px;
+            letter-spacing: normal;
+        }
+        #menuAuthTable tbody td.cell-path {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+        mark.menu-highlight {
+            background: #fef08a;
+            color: inherit;
+            padding: 0 1px;
+            border-radius: 2px;
+        }
+
         /* menu-tree-item highlight for scroll target */
         .menu-tree-item.menu-scroll-target {
             animation: menuHighlight 1.5s ease-out;
@@ -780,6 +863,12 @@
 
         <!-- Main View Tabs -->
         <div class="main-view-tabs">
+            <button class="main-view-tab" id="btnViewMenuAuth" onclick="switchView('menuAuth')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                </svg>
+                권한조회
+            </button>
             <button class="main-view-tab" id="btnViewMatrix" onclick="switchView('matrix')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -796,8 +885,8 @@
             </button>
         </div>
 
-        <!-- Action Bar: Matrix 검색 (기본 표시) -->
-        <div class="role-action-bar" id="matrixActionBar">
+        <!-- Action Bar: Matrix 검색 (기본 숨김) -->
+        <div class="role-action-bar" id="matrixActionBar" style="display:none;">
             <div class="filter-group">
                 <input type="text" id="matrixRoleSearch" class="role-search-input" placeholder="Role명 필터..." style="width:200px;" oninput="debounceMatrix()">
                 <input type="text" id="matrixDeptSearch" class="role-search-input" placeholder="부서명 필터..." style="width:180px;" oninput="debounceMatrix()">
@@ -820,7 +909,7 @@
         </div>
 
         <!-- Action Bar: 목록 검색 (기본 숨김) -->
-        <div class="role-action-bar" id="listActionBar" style="display:none;">
+        <div class="role-action-bar" id="listActionBar">
             <div class="filter-group">
                 <input type="text" id="searchInput" class="role-search-input" placeholder="Role ID / Role명 검색...">
                 <input type="text" id="menuSearchInput" class="role-search-input" placeholder="메뉴명 검색..." style="width:160px;">
@@ -838,8 +927,79 @@
             </div>
         </div>
 
-        <!-- Main 2-column layout (목록 뷰 - 기본 숨김) -->
-        <div class="role-main-layout" style="display:none;">
+        <!-- Action Bar: 권한조회 (기본 숨김) -->
+        <div class="role-action-bar" id="menuAuthActionBar" style="display:none;">
+            <div class="filter-group" style="flex-wrap:wrap;">
+                <input type="text" id="menuAuthSearchInput" class="role-search-input" placeholder="메뉴명 (예: 인사발령)" style="width:200px;">
+                <input type="text" id="menuAuthDeptInput" class="role-search-input" placeholder="부서명" style="width:150px;">
+                <input type="text" id="menuAuthUserInput" class="role-search-input" placeholder="사용자명/ID" style="width:160px;">
+                <select id="menuAuthActionSelect" class="role-search-input" style="width:140px; cursor:pointer;" title="권한 종류 필터">
+                    <option value="">전체</option>
+                    <option value="VIEW_ANY">조회/엑셀</option>
+                    <option value="A">전체권한</option>
+                </select>
+                <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#64748b; cursor:pointer; white-space:nowrap;">
+                    <input type="checkbox" id="menuAuthExact" style="margin:0;">
+                    메뉴명 정확히 일치
+                </label>
+                <button class="btn" id="btnMenuAuthReset" title="필터 초기화" style="padding: var(--space-1) var(--space-2); font-size: var(--font-size-xs); background:#f1f5f9; color:#475569;">
+                    초기화
+                </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <span id="menuAuthInfo" style="font-size:11px; color:var(--text-muted); white-space:nowrap;"></span>
+                <button class="btn btn-success" id="btnExportMenuAuth" title="엑셀 내보내기" disabled style="padding: var(--space-1) var(--space-3); font-size: var(--font-size-xs);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    엑셀
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu Auth View (기본 숨김) -->
+        <div id="menuAuthContainer" style="display:none;">
+            <div class="data-table-wrapper" style="margin-top: var(--space-2);">
+                <div style="max-height: calc(100vh - 240px); overflow: auto;">
+                    <table class="role-table" id="menuAuthTable" style="font-size:12px; width:100%;">
+                        <colgroup>
+                            <col style="width:44px;">
+                            <col style="width:140px;">
+                            <col style="width:100px;">
+                            <col style="width:140px;">
+                            <col style="width:220px;">
+                            <col style="width:180px;">
+                            <col style="width:auto;">
+                            <col style="width:90px;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>NO</th>
+                                <th class="ma-sortable" data-field="deptName">부서 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="userName">이름 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="userId">사용자 ID <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="roleId">ROLE ID / ROLE명 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="parentPath">상위 카테고리 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="menuName">메뉴명 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="actionId">권한 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="menuAuthTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center text-muted" style="padding: var(--space-6); font-size: var(--font-size-sm);">
+                                    메뉴명 · 부서명 · 사용자명/ID 중 하나 이상을 입력하세요. (권한 종류는 보조 필터)
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main 2-column layout (목록 뷰 - 기본 표시) -->
+        <div class="role-main-layout">
             <!-- Left: Role List -->
             <div class="role-list-panel">
                 <div id="groupTabBar" class="group-tab-bar" style="display:none;"></div>
@@ -923,8 +1083,8 @@
         </div>
     </div>
 
-        <!-- Matrix View (기본 표시) -->
-        <div class="matrix-container visible" id="matrixContainer">
+        <!-- Matrix View (기본 숨김) -->
+        <div class="matrix-container" id="matrixContainer">
             <div class="matrix-scroll" id="matrixScroll">
                 <div style="padding:40px; text-align:center; color:var(--text-muted); font-size:13px;">
                     데이터 로딩 중...
@@ -947,6 +1107,7 @@
             allDataLoaded: false, // true after preload
             sortField: 'roleName',
             sortDirection: 'asc',
+            menuAuthSort: { field: 'deptName', dir: 'asc' },
             isLoading: false
         };
 
@@ -1105,6 +1266,9 @@
                     if (document.getElementById('matrixContainer').classList.contains('visible')) {
                         renderMatrix();
                     }
+                    if (document.getElementById('menuAuthContainer').style.display !== 'none') {
+                        renderMenuAuth();
+                    }
                     hideLoading();
                     showToast('캐시 데이터', `${AppState.roles.length}개 Role 로드됨`, 'info');
                     return;
@@ -1143,6 +1307,9 @@
                 // Matrix 뷰가 활성 상태면 렌더
                 if (document.getElementById('matrixContainer').classList.contains('visible')) {
                     renderMatrix();
+                }
+                if (document.getElementById('menuAuthContainer').style.display !== 'none') {
+                    renderMenuAuth();
                 }
                 showToast('조회 완료', `${AppState.roles.length}개 Role 전체 로드 완료`, 'success');
             } catch (err) {
@@ -1499,25 +1666,38 @@
         function switchView(view) {
             const listView = document.querySelector('.role-main-layout');
             const matrixView = document.getElementById('matrixContainer');
+            const menuAuthView = document.getElementById('menuAuthContainer');
             const btnList = document.getElementById('btnViewList');
             const btnMatrix = document.getElementById('btnViewMatrix');
+            const btnMenuAuth = document.getElementById('btnViewMenuAuth');
             const matrixActionBar = document.getElementById('matrixActionBar');
             const listActionBar = document.getElementById('listActionBar');
+            const menuAuthActionBar = document.getElementById('menuAuthActionBar');
+
+            // 기본적으로 모두 숨김
+            listView.style.display = 'none';
+            matrixView.classList.remove('visible');
+            menuAuthView.style.display = 'none';
+            matrixActionBar.style.display = 'none';
+            listActionBar.style.display = 'none';
+            menuAuthActionBar.style.display = 'none';
+            btnList.classList.remove('active');
+            btnMatrix.classList.remove('active');
+            btnMenuAuth.classList.remove('active');
 
             if (view === 'matrix') {
-                listView.style.display = 'none';
                 matrixView.classList.add('visible');
-                btnList.classList.remove('active');
                 btnMatrix.classList.add('active');
                 matrixActionBar.style.display = '';
-                listActionBar.style.display = 'none';
                 if (AppState.allDataLoaded) renderMatrix();
+            } else if (view === 'menuAuth') {
+                menuAuthView.style.display = '';
+                btnMenuAuth.classList.add('active');
+                menuAuthActionBar.style.display = '';
+                renderMenuAuth();
             } else {
                 listView.style.display = '';
-                matrixView.classList.remove('visible');
                 btnList.classList.add('active');
-                btnMatrix.classList.remove('active');
-                matrixActionBar.style.display = 'none';
                 listActionBar.style.display = '';
             }
         }
@@ -1804,6 +1984,252 @@
 
 
         // ============================================================
+        // Menu Auth View (메뉴 권한자 조회)
+        // ============================================================
+        function splitMenuPath(menuPath, menuName) {
+            // menuPath 예: "인사 > 인사관리 > 인사발령" → 상위: "인사 > 인사관리", 현재: "인사발령"
+            if (!menuPath) return { parent: '', leaf: menuName || '' };
+            const parts = String(menuPath).split(' > ').map(p => p.trim()).filter(Boolean);
+            if (parts.length === 0) return { parent: '', leaf: menuName || '' };
+            if (parts.length === 1) return { parent: '', leaf: parts[0] };
+            const leaf = parts[parts.length - 1];
+            const parent = parts.slice(0, -1).join(' > ');
+            return { parent, leaf };
+        }
+
+        function highlightText(text, keyword) {
+            if (!keyword) return escapeHtml(text);
+            const safeText = String(text || '');
+            const lowerText = safeText.toLowerCase();
+            const lowerKey = keyword.toLowerCase();
+            const idx = lowerText.indexOf(lowerKey);
+            if (idx < 0) return escapeHtml(safeText);
+            return escapeHtml(safeText.slice(0, idx))
+                + '<mark class="menu-highlight">' + escapeHtml(safeText.slice(idx, idx + keyword.length)) + '</mark>'
+                + escapeHtml(safeText.slice(idx + keyword.length));
+        }
+
+        function actionBadgeHtml(actionId, actionName) {
+            const cls = 'action-badge action-badge-' + (actionId || 'N');
+            return '<span class="' + cls + '">' + escapeHtml(actionName || actionId || '-') + '</span>';
+        }
+
+        function buildMenuAuthRows() {
+            const keyword = (document.getElementById('menuAuthSearchInput').value || '').trim();
+            const deptFilter = (document.getElementById('menuAuthDeptInput').value || '').trim().toLowerCase();
+            const userFilter = (document.getElementById('menuAuthUserInput').value || '').trim().toLowerCase();
+            const actionFilter = (document.getElementById('menuAuthActionSelect').value || '').trim();
+            const exact = document.getElementById('menuAuthExact').checked;
+
+            // 메뉴명·부서명·사용자명 중 하나는 필수 (권한 종류만으로는 조회 불가 — 결과 과다 방지)
+            const hasScopeFilter = keyword || deptFilter || userFilter;
+            if (!hasScopeFilter) return { rows: [], keyword: '', hasFilter: false };
+
+            const lowerKey = keyword.toLowerCase();
+            const roleNameMap = {};
+            AppState.roles.forEach(r => { roleNameMap[r.roleId] = r.roleName; });
+
+            const matchAction = (id) => {
+                if (!actionFilter) return true;
+                if (actionFilter === 'VIEW_ANY') return id === 'Q' || id === 'E';
+                return id === actionFilter;
+            };
+
+            const rows = [];
+            Object.entries(AppState.roleMenuCache).forEach(([roleId, menus]) => {
+                if (!menus || menus.length === 0) return;
+
+                // 메뉴명 필터 (있으면 적용)
+                const matchedMenus = keyword
+                    ? menus.filter(m => {
+                        const name = (m.menuName || '').toLowerCase();
+                        return exact ? name === lowerKey : name.includes(lowerKey);
+                    })
+                    : menus;
+                if (matchedMenus.length === 0) return;
+
+                // 권한 종류 필터
+                const actionFiltered = matchedMenus.filter(m => matchAction(m.actionId || 'N'));
+                if (actionFiltered.length === 0) return;
+
+                const users = AppState.roleUserCache[roleId] || [];
+                if (users.length === 0) return;
+
+                // 사용자 필터 선 적용(성능)
+                const filteredUsers = users.filter(u => {
+                    if (deptFilter && !(u.deptName || '').toLowerCase().includes(deptFilter)) return false;
+                    if (userFilter) {
+                        const un = (u.userName || '').toLowerCase();
+                        const uid = (u.userId || '').toLowerCase();
+                        if (!un.includes(userFilter) && !uid.includes(userFilter)) return false;
+                    }
+                    return true;
+                });
+                if (filteredUsers.length === 0) return;
+
+                actionFiltered.forEach(menu => {
+                    const { parent, leaf } = splitMenuPath(menu.menuPath, menu.menuName);
+                    filteredUsers.forEach(u => {
+                        rows.push({
+                            deptName: u.deptName || '',
+                            userName: u.userName || '',
+                            userId: u.userId || '',
+                            roleId: roleId,
+                            roleName: roleNameMap[roleId] || '',
+                            parentPath: parent,
+                            menuName: leaf,
+                            menuId: menu.menuId || '',
+                            actionId: menu.actionId || 'N',
+                            actionName: menu.actionName || ''
+                        });
+                    });
+                });
+            });
+
+            // 중복 제거(동일 사용자 + 동일 메뉴 + 동일 roleId + 동일 action)
+            const seen = new Set();
+            const unique = [];
+            rows.forEach(r => {
+                const k = r.userId + '|' + r.roleId + '|' + r.menuId + '|' + r.actionId;
+                if (seen.has(k)) return;
+                seen.add(k);
+                unique.push(r);
+            });
+
+            // 사용자 선택 정렬 필드 적용
+            const sort = AppState.menuAuthSort || { field: 'deptName', dir: 'asc' };
+            const dirMul = sort.dir === 'desc' ? -1 : 1;
+            const primaryCmp = (a, b) => {
+                const av = (a[sort.field] || '');
+                const bv = (b[sort.field] || '');
+                if (sort.field === 'actionId') {
+                    // 권한: A > E > Q > N
+                    const order = { A: 0, E: 1, Q: 2, N: 3 };
+                    return ((order[av] ?? 9) - (order[bv] ?? 9)) * dirMul;
+                }
+                return av.localeCompare(bv, 'ko') * dirMul;
+            };
+            // 동률일 때 보조 정렬: 부서 → 이름 → roleId → 메뉴명
+            unique.sort((a, b) => {
+                return primaryCmp(a, b)
+                    || (a.deptName || '').localeCompare(b.deptName || '', 'ko')
+                    || (a.userName || '').localeCompare(b.userName || '', 'ko')
+                    || (a.roleId || '').localeCompare(b.roleId || '')
+                    || (a.menuName || '').localeCompare(b.menuName || '', 'ko');
+            });
+
+            return { rows: unique, keyword, hasFilter: true };
+        }
+
+        function updateMenuAuthSortIndicators() {
+            const sort = AppState.menuAuthSort || {};
+            document.querySelectorAll('#menuAuthTable thead th.ma-sortable').forEach(th => {
+                th.classList.remove('sort-active');
+                const ind = th.querySelector('.sort-indicator');
+                if (th.dataset.field === sort.field) {
+                    th.classList.add('sort-active');
+                    if (ind) ind.textContent = sort.dir === 'desc' ? '\u25BC' : '\u25B2';
+                } else {
+                    if (ind) ind.textContent = '\u25B4\u25BE';
+                }
+            });
+        }
+
+        function handleMenuAuthSort(field) {
+            const cur = AppState.menuAuthSort || { field: '', dir: 'asc' };
+            if (cur.field === field) {
+                AppState.menuAuthSort = { field, dir: cur.dir === 'asc' ? 'desc' : 'asc' };
+            } else {
+                AppState.menuAuthSort = { field, dir: 'asc' };
+            }
+            renderMenuAuth();
+        }
+
+        function renderMenuAuth() {
+            const tbody = document.getElementById('menuAuthTableBody');
+            const info = document.getElementById('menuAuthInfo');
+            const btn = document.getElementById('btnExportMenuAuth');
+
+            if (!AppState.allDataLoaded) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:var(--space-6);">데이터 로딩 중입니다...</td></tr>';
+                info.textContent = '';
+                btn.disabled = true;
+                return;
+            }
+
+            const { rows, keyword, hasFilter } = buildMenuAuthRows();
+
+            if (!hasFilter) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:var(--space-6);">메뉴명 · 부서명 · 사용자명/ID 중 하나 이상을 입력하세요. (권한 종류는 보조 필터)</td></tr>';
+                info.textContent = '';
+                btn.disabled = true;
+                return;
+            }
+
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:var(--space-6);">조건에 일치하는 권한자가 없습니다.</td></tr>';
+                info.textContent = '0건';
+                btn.disabled = true;
+                return;
+            }
+
+            const userSet = new Set(rows.map(r => r.userId));
+            const menuSet = new Set(rows.map(r => r.menuId));
+            const roleSet = new Set(rows.map(r => r.roleId));
+            info.textContent = `${rows.length}건 · 사용자 ${userSet.size}명 · 메뉴 ${menuSet.size}개 · Role ${roleSet.size}개`;
+
+            const html = rows.map((r, i) => {
+                return '<tr>'
+                    + '<td class="text-center">' + (i + 1) + '</td>'
+                    + '<td>' + escapeHtml(r.deptName) + '</td>'
+                    + '<td>' + escapeHtml(r.userName) + '</td>'
+                    + '<td>' + escapeHtml(r.userId) + '</td>'
+                    + '<td class="cell-role" title="' + escapeHtml(r.roleId + ' — ' + r.roleName) + '">'
+                        + '<span class="role-id">' + escapeHtml(r.roleId) + '</span>'
+                        + '<span class="role-name">' + escapeHtml(r.roleName || '-') + '</span>'
+                        + '</td>'
+                    + '<td class="cell-path">' + escapeHtml(r.parentPath || '-') + '</td>'
+                    + '<td>' + highlightText(r.menuName, keyword) + '</td>'
+                    + '<td class="text-center">' + actionBadgeHtml(r.actionId, r.actionName) + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            tbody.innerHTML = html;
+            btn.disabled = false;
+            updateMenuAuthSortIndicators();
+        }
+
+        function exportMenuAuthExcel() {
+            const { rows, keyword } = buildMenuAuthRows();
+            if (!rows.length) {
+                showToast('내보내기 실패', '내보낼 데이터가 없습니다.', 'warning');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const data = rows.map((r, i) => ({
+                'NO': i + 1,
+                '부서': r.deptName,
+                '이름': r.userName,
+                '사용자 ID': r.userId,
+                'ROLE ID': r.roleId,
+                'ROLE명': r.roleName,
+                '상위 카테고리': r.parentPath,
+                '메뉴명': r.menuName,
+                '권한': r.actionName || r.actionId
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
+                { wch: 24 }, { wch: 30 }, { wch: 30 }, { wch: 20 }, { wch: 10 }
+            ];
+            const safeKey = (keyword || '필터').replace(/[\\/:*?"<>|]/g, '_');
+            XLSX.utils.book_append_sheet(wb, ws, '권한자');
+            const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            XLSX.writeFile(wb, `권한자_${safeKey}_${today}.xlsx`);
+            showToast('내보내기 완료', `${rows.length}건 내보냄`, 'success');
+        }
+
+        // ============================================================
         // Utility
         // ============================================================
         function escapeHtml(str) {
@@ -1821,8 +2247,8 @@
             // 엑셀 버튼: 목록용
             document.getElementById('btnExportList').addEventListener('click', exportExcel);
 
-            // 기본 뷰: Matrix 활성화
-            document.getElementById('btnViewMatrix').classList.add('active');
+            // 기본 뷰: 목록 활성화
+            document.getElementById('btnViewList').classList.add('active');
 
             // 페이지 접속 시 자동으로 데이터 1회 조회
             loadRoleList(false);
@@ -1884,6 +2310,47 @@
             document.getElementById('userSearchInput').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); filterRoles(); }
             });
+
+            // ===== Menu Auth (권한조회) =====
+            document.getElementById('btnExportMenuAuth').addEventListener('click', exportMenuAuthExcel);
+
+            let menuAuthTimer;
+            const triggerMenuAuth = () => {
+                clearTimeout(menuAuthTimer);
+                menuAuthTimer = setTimeout(() => {
+                    if (!AppState.allDataLoaded) {
+                        showToast('안내', '데이터 로딩이 완료된 후 검색 가능합니다.', 'warning');
+                        return;
+                    }
+                    renderMenuAuth();
+                }, 300);
+            };
+            ['menuAuthSearchInput', 'menuAuthDeptInput', 'menuAuthUserInput'].forEach(id => {
+                document.getElementById(id).addEventListener('input', triggerMenuAuth);
+                document.getElementById(id).addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); renderMenuAuth(); }
+                });
+            });
+            document.getElementById('menuAuthExact').addEventListener('change', () => {
+                if (AppState.allDataLoaded) renderMenuAuth();
+            });
+            document.getElementById('menuAuthActionSelect').addEventListener('change', () => {
+                if (AppState.allDataLoaded) renderMenuAuth();
+            });
+            document.getElementById('btnMenuAuthReset').addEventListener('click', () => {
+                document.getElementById('menuAuthSearchInput').value = '';
+                document.getElementById('menuAuthDeptInput').value = '';
+                document.getElementById('menuAuthUserInput').value = '';
+                document.getElementById('menuAuthActionSelect').value = '';
+                document.getElementById('menuAuthExact').checked = false;
+                AppState.menuAuthSort = { field: 'deptName', dir: 'asc' };
+                if (AppState.allDataLoaded) renderMenuAuth();
+            });
+
+            document.querySelectorAll('#menuAuthTable thead th.ma-sortable').forEach(th => {
+                th.addEventListener('click', () => handleMenuAuthSort(th.dataset.field));
+            });
+            updateMenuAuthSortIndicators();
         });
     </script>
 </body>
