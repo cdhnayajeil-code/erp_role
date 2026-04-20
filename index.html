@@ -966,23 +966,23 @@
                     <table class="role-table" id="menuAuthTable" style="font-size:12px; width:100%;">
                         <colgroup>
                             <col style="width:44px;">
-                            <col style="width:140px;">
+                            <col style="width:200px;">
+                            <col style="width:220px;">
+                            <col style="width:auto;">
                             <col style="width:100px;">
                             <col style="width:140px;">
-                            <col style="width:220px;">
-                            <col style="width:180px;">
-                            <col style="width:auto;">
+                            <col style="width:140px;">
                             <col style="width:90px;">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>NO</th>
-                                <th class="ma-sortable" data-field="deptName">부서 <span class="sort-indicator">&#9650;&#9660;</span></th>
-                                <th class="ma-sortable" data-field="userName">이름 <span class="sort-indicator">&#9650;&#9660;</span></th>
-                                <th class="ma-sortable" data-field="userId">사용자 ID <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="menuName">메뉴명 <span class="sort-indicator">&#9650;&#9660;</span></th>
                                 <th class="ma-sortable" data-field="roleId">ROLE ID / ROLE명 <span class="sort-indicator">&#9650;&#9660;</span></th>
                                 <th class="ma-sortable" data-field="parentPath">상위 카테고리 <span class="sort-indicator">&#9650;&#9660;</span></th>
-                                <th class="ma-sortable" data-field="menuName">메뉴명 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="userName">이름 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="deptName">부서 <span class="sort-indicator">&#9650;&#9660;</span></th>
+                                <th class="ma-sortable" data-field="userId">사용자 ID <span class="sort-indicator">&#9650;&#9660;</span></th>
                                 <th class="ma-sortable" data-field="actionId">권한 <span class="sort-indicator">&#9650;&#9660;</span></th>
                             </tr>
                         </thead>
@@ -2181,15 +2181,15 @@
             const html = rows.map((r, i) => {
                 return '<tr>'
                     + '<td class="text-center">' + (i + 1) + '</td>'
-                    + '<td>' + escapeHtml(r.deptName) + '</td>'
-                    + '<td>' + escapeHtml(r.userName) + '</td>'
-                    + '<td>' + escapeHtml(r.userId) + '</td>'
+                    + '<td>' + highlightText(r.menuName, keyword) + '</td>'
                     + '<td class="cell-role" title="' + escapeHtml(r.roleId + ' — ' + r.roleName) + '">'
                         + '<span class="role-id">' + escapeHtml(r.roleId) + '</span>'
                         + '<span class="role-name">' + escapeHtml(r.roleName || '-') + '</span>'
                         + '</td>'
                     + '<td class="cell-path">' + escapeHtml(r.parentPath || '-') + '</td>'
-                    + '<td>' + highlightText(r.menuName, keyword) + '</td>'
+                    + '<td>' + escapeHtml(r.userName) + '</td>'
+                    + '<td>' + escapeHtml(r.deptName) + '</td>'
+                    + '<td>' + escapeHtml(r.userId) + '</td>'
                     + '<td class="text-center">' + actionBadgeHtml(r.actionId, r.actionName) + '</td>'
                     + '</tr>';
             }).join('');
